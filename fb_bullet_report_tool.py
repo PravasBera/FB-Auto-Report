@@ -9,14 +9,15 @@ Y = '\033[93m'   # Yellow
 P = '\033[95m'   # Pink/Magenta
 W = '\033[0m'    # Reset
 
-# ===== Banner ==========
+# ===== Clean BULLET ASCII Banner =====
 banner = f"""{G}
- ██████╗ ██╗   ██╗██╗     ██╗     ███████╗████████╗████████╗
-██╔════╝ ██║   ██║██║     ██║     ██╔════╝╚══██╔══╝╚══██╔══╝
-██║  ███╗██║   ██║██║     ██║     █████╗     ██║      ██║   
-██║   ██║██║   ██║██║     ██║     ██╔══╝     ██║      ██║   
-╚██████╔╝╚██████╔╝███████╗███████╗███████╗   ██║      ██║   
- ╚═════╝  ╚═════╝ ╚══════╝╚══════╝╚══════╝   ╚═╝      ╚═╝   
+██████╗  ██╗  ██╗██╗         ██╗        ███████╗████████╗
+██╔══██╗██║  ██║██║         ██║        ██╔════╝╚══██╔══╝
+██████╔╝██║  ██║██║         ██║        █████╗        ██║   
+██╔══██╗██║  ██║██║         ██║        ██╔══╝        ██║   
+██║ ██║╚██████╔╝███████╗███████╗███████╗    ██║   
+╚═╝ ╚═╝ ╚═════╝ ╚══════╝╚══════╝╚══════╝     ╚═╝   
+
 {R}                      TEAM{W}
 
 {P}FaceBook Auto Reporting Tool{W}
@@ -65,10 +66,11 @@ def send_report(cookie, target_id, fb_dtsg, jazoest, reason_code, what="profile"
     return requests.post(url, data=data, headers=headers)
 
 def main():
-    print(banner)  # show colorful banner
+    print(banner)  # Banner show
 
     print(f"{Y}1) Report Profile   2) Report Post   3) Report Page{W}")
     choice = input("Choose option (1/2/3): ").strip()
+
     if choice == "1":
         what = "profile"
     elif choice == "2":
@@ -79,7 +81,6 @@ def main():
         print("Invalid option.")
         return
 
-    # Reason menu
     print(f"\n{P}---- Select Report Reason ----{W}")
     for key, (_, txt) in REASONS.items():
         print(f"{key}) {txt}")
@@ -90,14 +91,13 @@ def main():
         return
 
     reason_code = REASONS[rchoice][0]
-
     target_id = input(f"{G}Enter numeric Target ID: {W}").strip()
 
     try:
         with open("cookies.txt", "r") as f:
             cookies = [line.strip() for line in f if line.strip()]
     except:
-        print("cookies.txt file not found!")
+        print("cookies.txt not found!")
         return
 
     print(f"\n{G}[+] Loaded {len(cookies)} cookies.{W}")
@@ -107,19 +107,20 @@ def main():
         print(f"{Y}[*] Using cookie: {ck[:20]}...{W}")
         fb_dtsg, jazoest = get_tokens(ck, target_id, what)
         if not fb_dtsg:
-            print(f"{R}   [-] Failed to get tokens, skipping.{W}")
+            print(f"{R}   [-] Failed token, skipping.{W}")
             continue
 
         res = send_report(ck, target_id, fb_dtsg, jazoest, reason_code, what)
         if res.status_code == 200:
-            print(f"{G}   [+] Report sent!{W}")
+            print(f"{G}   [+] Report Sent!{W}")
             count += 1
         else:
-            print(f"{R}   [-] Failed: {res.status_code}{W}")
-        time.sleep(5)  # Delay for safety
+            print(f"{R}   [-] HTTP {res.status_code}{W}")
 
-    print(f"\n{P}==== DONE ===={W}")
-    print(f"Reports attempted with {count}/{len(cookies)} cookies")
+        time.sleep(5)  # Delay
+
+    print(f"\n==== DONE ====")
+    print(f"Reports done: {count}/{len(cookies)}")
 
 if __name__ == "__main__":
     main()
