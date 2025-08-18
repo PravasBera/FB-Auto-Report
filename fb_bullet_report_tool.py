@@ -1,6 +1,10 @@
+import os
 import requests
 from bs4 import BeautifulSoup
 import time
+
+# Clear terminal screen
+os.system("clear")
 
 # ===== Color codes =====
 R = '\033[91m'   # Red
@@ -9,14 +13,14 @@ Y = '\033[93m'   # Yellow
 P = '\033[95m'   # Pink/Magenta
 W = '\033[0m'    # Reset
 
-# ===== Clean BULLET ASCII Banner =====
+# ===== ASCII Banner =====
 banner = f"""{G}
-██████╗  ██╗  ██╗██╗         ██╗        ███████╗████████╗
-██╔══██╗██║  ██║██║         ██║        ██╔════╝╚══██╔══╝
-██████╔╝██║  ██║██║         ██║        █████╗        ██║   
-██╔══██╗██║  ██║██║         ██║        ██╔══╝        ██║   
-██║ ██║╚██████╔╝███████╗███████╗███████╗    ██║   
-╚═╝ ╚═╝ ╚═════╝ ╚══════╝╚══════╝╚══════╝     ╚═╝   
+██████╗ ██╗   ██╗██╗     ██╗     ███████╗████████╗
+██╔══██╗██║   ██║██║     ██║     ██╔════╝╚══██╔══╝
+██████╔╝██║   ██║██║     ██║     █████╗     ██║   
+██╔══██╗██║   ██║██║     ██║     ██╔══╝     ██║   
+██║  ██║╚██████╔╝███████╗███████╗███████╗   ██║   
+╚═╝  ╚═╝ ╚═════╝ ╚══════╝╚══════╝╚══════╝   ╚═╝   
 
 {R}                      TEAM{W}
 
@@ -28,6 +32,8 @@ Country : India{W}
 
 {R}Indian Danger Of Bullet Team{W}
 """
+
+print(banner)
 
 # ===== Reason codes =====
 REASONS = {
@@ -66,8 +72,6 @@ def send_report(cookie, target_id, fb_dtsg, jazoest, reason_code, what="profile"
     return requests.post(url, data=data, headers=headers)
 
 def main():
-    print(banner)  # Banner show
-
     print(f"{Y}1) Report Profile   2) Report Post   3) Report Page{W}")
     choice = input("Choose option (1/2/3): ").strip()
 
@@ -107,17 +111,16 @@ def main():
         print(f"{Y}[*] Using cookie: {ck[:20]}...{W}")
         fb_dtsg, jazoest = get_tokens(ck, target_id, what)
         if not fb_dtsg:
-            print(f"{R}   [-] Failed token, skipping.{W}")
+            print(f"{R}   [-] Token missing, skipping.{W}")
             continue
 
         res = send_report(ck, target_id, fb_dtsg, jazoest, reason_code, what)
         if res.status_code == 200:
-            print(f"{G}   [+] Report Sent!{W}")
+            print(f"{G}   [+] Report sent!{W}")
             count += 1
         else:
             print(f"{R}   [-] HTTP {res.status_code}{W}")
-
-        time.sleep(5)  # Delay
+        time.sleep(5)
 
     print(f"\n==== DONE ====")
     print(f"Reports done: {count}/{len(cookies)}")
