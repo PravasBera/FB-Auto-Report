@@ -2,30 +2,31 @@ import os
 import requests
 from bs4 import BeautifulSoup
 import time
+import re
 
 # ===== Color codes =====
-R = '\033[91m'   # Red
-G = '\033[92m'   # Green
-Y = '\033[93m'   # Yellow
-P = '\033[95m'   # Pink/Magenta
-W = '\033[0m'    # Reset
+R = '\033[91m'
+G = '\033[92m'
+Y = '\033[93m'
+P = '\033[95m'
+W = '\033[0m'
 
-# ===== ASCII Banner =====
+# ===== Banner Function =====
 def show_banner():
     print(f"""{G}
 ██████╗ ██╗   ██╗██╗     ██╗     ███████╗████████╗
 ██╔══██╗██║   ██║██║     ██║     ██╔════╝╚══██╔══╝
 ██████╔╝██║   ██║██║     ██║     █████╗     ██║   
 ██╔══██╗██║   ██║██║     ██║     ██╔══╝     ██║   
-██████║╚██████╔╝███████╗███████╗███████╗██║   
-╚═════╝ ╚═════╝ ╚══════╝╚══════╝╚══════╝ ╚═╝         
+██████║   ██████╔╝███████╗███████╗███████╗   ██║   
+╚═════╝  ╚═════╝ ╚══════╝╚══════╝╚══════╝   ╚═╝   
 
 {R}                      TEAM{W}
 
 {P}FaceBook Auto Reporting Tool{W}
 
 {Y}Author : Pravas Bera
-Version : 1.2
+Version : 1.3
 Country : India{W}
 
 {R}Indian Danger Of Bullet Team{W}
@@ -48,13 +49,30 @@ POST_REASONS = {
     "5": ("spam", "Spam or Scam")
 }
 
-# ===== Main Token Request =====
+# ===== Convert Link to Numeric ID =====
+def extract_id(text, cookie):
+    text = text.strip()
+    if text.isdigit():
+        return text
+    elif "facebook.com" in text:
+        try:
+            headers = {"Cookie": cookie, "User-Agent": "Mozilla/5.0"}
+            res = requests.get(text, headers=headers)
+            match = re.search(r'profile_id":"(\d+)"', res.text)
+            if match:
+                return match.group(1)
+            # For posts pageID_postID
+            match2 = re.search(r'entity_id":"(\d+)"', res.text)
+            if match2:
+                return match2.group(1)
+        except:
+            return None
+    return None
+
+# ===== mbasic GET token =====
 def get_tokens(cookie, target_id, what="profile"):
     url = f"https://mbasic.facebook.com/a/report/?subject={target_id}&what={what}"
-    headers = {
-        "User-Agent": "Mozilla/5.0",
-        "Cookie": cookie
-    }
+    headers = {"Cookie": cookie, "User-Agent": "Mozilla/5.0"}
     try:
         res = requests.get(url, headers=headers)
         soup = BeautifulSoup(res.text, "html.parser")
@@ -73,17 +91,17 @@ def send_report(cookie, target_id, fb_dtsg, jazoest, reason_code, what="profile"
         "source": what,
         "submit": "Submit"
     }
-    headers = {"User-Agent": "Mozilla/5.0", "Cookie": cookie}
+    headers = {"Cookie": cookie, "User-Agent": "Mozilla/5.0"}
     return requests.post(url, data=data, headers=headers)
 
-# ===== Main Function =====
+# ===== MAIN =====
 def main():
     os.system("clear")
     show_banner()
 
+    # Main Menu
     print(f"{Y}1) Report Profile   2) Report Post   3) Report Page{W}")
     choice = input("Choose option (1/2/3): ").strip()
-
     if choice == "1":
         what = "profile"
         reasons = PROFILE_REASONS
@@ -97,62 +115,75 @@ def main():
         print("Invalid option.")
         return
 
-    # Clear and show banner again
+    # Clear wrapper
     os.system("clear")
     show_banner()
 
+    # Reason menu
     print(f"{P}---- Select Report Reason ----{W}")
-    for key, (_, txt) in reasons.items():
-        print(f"{key}) {txt}")
-    rchoice = input("Select Reason: ").strip()
-
-    if rchoice not in reasons:
+    for key, val in reasons.items():
+        print(f"{key}) {val[1]}")
+    rc = input("Select Reason: ").strip()
+    if rc not in reasons:
         print("Invalid reason.")
         return
+    reason_code = reasons[rc][0]
 
-    reason_code = reasons[rchoice][0]
-    target_id = input(f"{G}Enter numeric Target ID: {W}").strip()
-
+    # Load cookies from file
     try:
         with open("cookies.txt", "r") as f:
-            cookies = [line.strip() for line in f if line.strip()]
+            cookies = [i.strip() for i in f if i.strip()]
     except:
         print("cookies.txt not found!")
         return
 
-    print(f"\n{G}[+] Loaded {len(cookies)} cookies.{W}")
+    if not cookies:
+        print("No cookies in file!")
+        return
+
+    # Ask ID or link, validate
+    while True:
+        user_input = input(f"{G}Enter Target ID or FB Link: {W}")
+        # use first cookie to convert if needed
+        target_id = extract_id(user_input, cookies[0])
+        if target_id:
+            break
+        else:
+            print(f"{R}Invalid ID or link, try again...{W}")
+
+    print(f"\n{G}[+] Loaded {len(cookies)} cookies. Starting report...{W}")
     success = 0
     failed = 0
-    failed_list = []
+    bad_list = []
 
+    # Loop through cookies
     for ck in cookies:
         print(f"{Y}[*] Using cookie: {ck[:20]}...{W}")
         fb_dtsg, jazoest = get_tokens(ck, target_id, what)
         if not fb_dtsg:
-            print(f"{R}   [-] Invalid or checkpoint cookie, skipping.{W}")
+            print(f"{R}   [-] Invalid / checkpoint cookie{W}")
+            bad_list.append(ck)
             failed += 1
-            failed_list.append(ck)
             continue
-
-        response = send_report(ck, target_id, fb_dtsg, jazoest, reason_code, what)
-        if response.status_code == 200:
-            print(f"{G}   [+] Report Sent!{W}")
+        resp = send_report(ck, target_id, fb_dtsg, jazoest, reason_code, what)
+        if resp.status_code == 200:
             success += 1
+            print(f"{G}   [+] Report sent!{W}")
         else:
-            print(f"{R}   [-] HTTP {response.status_code}{W}")
+            failed += 1
+            print(f"{R}   [-] HTTP {resp.status_code}{W}")
         time.sleep(5)
 
-    # Save failed into file
-    if failed_list:
-        with open("failed.txt", "w") as fp:
-            for x in failed_list:
-                fp.write(x + "\n")
+    if bad_list:
+        with open("failed.txt", "w") as f:
+            for b in bad_list:
+                f.write(b+"\n")
 
     print(f"\n==== DONE ====")
-    print(f"{G}Successful: {success}{W}")
-    print(f"{R}Failed/Invalid: {failed}{W}")
-    if failed > 0:
-        print(f"{Y}Failed cookies saved to failed.txt{W}")
+    print(f"{G}Success : {success}{W}")
+    print(f"{R}Failed  : {failed}{W}")
+    if bad_list:
+        print(f"{Y}Invalid cookies saved in failed.txt{W}")
 
 if __name__ == "__main__":
     main()
