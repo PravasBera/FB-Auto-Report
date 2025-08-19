@@ -26,7 +26,7 @@ def show_banner():
 {P}FaceBook Auto Reporting Tool{W}
 
 {Y}Author : Pravas Bera
-Version : 1.3
+Version : 1.3.1
 Country : India{W}
 
 {R}Indian Danger Of Bullet Team{W}
@@ -58,13 +58,15 @@ def extract_id(text, cookie):
         try:
             headers = {"Cookie": cookie, "User-Agent": "Mozilla/5.0"}
             res = requests.get(text, headers=headers)
-            match = re.search(r'profile_id":"(\d+)"', res.text)
-            if match:
-                return match.group(1)
-            # For posts pageID_postID
-            match2 = re.search(r'entity_id":"(\d+)"', res.text)
-            if match2:
-                return match2.group(1)
+            html = res.text
+            # Try 3 different patterns
+            m = re.search(r'profile_id":"(\d+)"', html)
+            if not m:
+                m = re.search(r'entity_id":"(\d+)"', html)
+            if not m:
+                m = re.search(r'userID":"(\d+)"', html)
+            if m:
+                return m.group(1)
         except:
             return None
     return None
