@@ -9,7 +9,7 @@ This is an automatic Facebook reporting script that uses multiple cookies to sen
 
 ## How to use
 1. Put cookies in cookies.txt (one cookie per line).
-2. Run the script: `python fb_bullet_report_tool.py`
+2. Run the script: `BULLET.py`
 3. Select profile/post/page
 4. Select report reason
 5. Enter target numeric ID
