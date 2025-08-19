@@ -3,9 +3,6 @@ import requests
 from bs4 import BeautifulSoup
 import time
 
-# Clear terminal screen
-os.system("clear")
-
 # ===== Color codes =====
 R = '\033[91m'   # Red
 G = '\033[92m'   # Green
@@ -14,29 +11,28 @@ P = '\033[95m'   # Pink/Magenta
 W = '\033[0m'    # Reset
 
 # ===== ASCII Banner =====
-banner = f"""{G}
+def show_banner():
+    print(f"""{G}
 ██████╗ ██╗   ██╗██╗     ██╗     ███████╗████████╗
 ██╔══██╗██║   ██║██║     ██║     ██╔════╝╚══██╔══╝
 ██████╔╝██║   ██║██║     ██║     █████╗     ██║   
 ██╔══██╗██║   ██║██║     ██║     ██╔══╝     ██║   
-██████║╚██████╔╝███████╗███████╗███████╗   ██║   
-╚═════╝ ╚═════╝ ╚══════╝╚══════╝╚══════╝   ╚═╝   
+██████║╚██████╔╝███████╗███████╗███████╗██║   
+╚═════╝ ╚═════╝ ╚══════╝╚══════╝╚══════╝ ╚═╝         
 
 {R}                      TEAM{W}
 
 {P}FaceBook Auto Reporting Tool{W}
 
 {Y}Author : Pravas Bera
-Version : 1.0
+Version : 1.2
 Country : India{W}
 
 {R}Indian Danger Of Bullet Team{W}
-"""
+""")
 
-print(banner)
-
-# ===== Reason codes =====
-REASONS = {
+# ===== Reason menus =====
+PROFILE_REASONS = {
     "1": ("fake_profile", "Fake Account"),
     "2": ("spam", "Spam or Scam"),
     "3": ("harassment", "Harassment or Hate"),
@@ -44,10 +40,19 @@ REASONS = {
     "5": ("violence", "Violence")
 }
 
+POST_REASONS = {
+    "1": ("nudity", "Nudity / Sexual"),
+    "2": ("hate_speech", "Hate Speech / Symbols"),
+    "3": ("violence", "Violence / Bloody"),
+    "4": ("false_info", "False Information"),
+    "5": ("spam", "Spam or Scam")
+}
+
+# ===== Main Token Request =====
 def get_tokens(cookie, target_id, what="profile"):
     url = f"https://mbasic.facebook.com/a/report/?subject={target_id}&what={what}"
     headers = {
-        "User-Agent": "Mozilla/5.0 (Linux; Android 10)",
+        "User-Agent": "Mozilla/5.0",
         "Cookie": cookie
     }
     try:
@@ -71,30 +76,41 @@ def send_report(cookie, target_id, fb_dtsg, jazoest, reason_code, what="profile"
     headers = {"User-Agent": "Mozilla/5.0", "Cookie": cookie}
     return requests.post(url, data=data, headers=headers)
 
+# ===== Main Function =====
 def main():
+    os.system("clear")
+    show_banner()
+
     print(f"{Y}1) Report Profile   2) Report Post   3) Report Page{W}")
     choice = input("Choose option (1/2/3): ").strip()
 
     if choice == "1":
         what = "profile"
+        reasons = PROFILE_REASONS
     elif choice == "2":
         what = "post"
+        reasons = POST_REASONS
     elif choice == "3":
         what = "page"
+        reasons = PROFILE_REASONS
     else:
         print("Invalid option.")
         return
 
-    print(f"\n{P}---- Select Report Reason ----{W}")
-    for key, (_, txt) in REASONS.items():
-        print(f"{key}) {txt}")
-    rchoice = input("Select Reason (1-5): ").strip()
+    # Clear and show banner again
+    os.system("clear")
+    show_banner()
 
-    if rchoice not in REASONS:
+    print(f"{P}---- Select Report Reason ----{W}")
+    for key, (_, txt) in reasons.items():
+        print(f"{key}) {txt}")
+    rchoice = input("Select Reason: ").strip()
+
+    if rchoice not in reasons:
         print("Invalid reason.")
         return
 
-    reason_code = REASONS[rchoice][0]
+    reason_code = reasons[rchoice][0]
     target_id = input(f"{G}Enter numeric Target ID: {W}").strip()
 
     try:
@@ -105,25 +121,38 @@ def main():
         return
 
     print(f"\n{G}[+] Loaded {len(cookies)} cookies.{W}")
-    count = 0
+    success = 0
+    failed = 0
+    failed_list = []
 
     for ck in cookies:
         print(f"{Y}[*] Using cookie: {ck[:20]}...{W}")
         fb_dtsg, jazoest = get_tokens(ck, target_id, what)
         if not fb_dtsg:
-            print(f"{R}   [-] Token missing, skipping.{W}")
+            print(f"{R}   [-] Invalid or checkpoint cookie, skipping.{W}")
+            failed += 1
+            failed_list.append(ck)
             continue
 
-        res = send_report(ck, target_id, fb_dtsg, jazoest, reason_code, what)
-        if res.status_code == 200:
-            print(f"{G}   [+] Report sent!{W}")
-            count += 1
+        response = send_report(ck, target_id, fb_dtsg, jazoest, reason_code, what)
+        if response.status_code == 200:
+            print(f"{G}   [+] Report Sent!{W}")
+            success += 1
         else:
-            print(f"{R}   [-] HTTP {res.status_code}{W}")
+            print(f"{R}   [-] HTTP {response.status_code}{W}")
         time.sleep(5)
 
+    # Save failed into file
+    if failed_list:
+        with open("failed.txt", "w") as fp:
+            for x in failed_list:
+                fp.write(x + "\n")
+
     print(f"\n==== DONE ====")
-    print(f"Reports done: {count}/{len(cookies)}")
+    print(f"{G}Successful: {success}{W}")
+    print(f"{R}Failed/Invalid: {failed}{W}")
+    if failed > 0:
+        print(f"{Y}Failed cookies saved to failed.txt{W}")
 
 if __name__ == "__main__":
     main()
